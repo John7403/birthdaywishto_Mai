@@ -79,7 +79,7 @@ const playlistTracks = [
 
 const surprisePageRef = ref(null)
 
-const TARGET = new Date('2026-05-14T00:00:00-04:00')
+const TARGET = new Date('2026-06-09T00:00:00-04:00')
 
 const DAY_MS = 86_400_000
 const HOUR_MS = 3_600_000
