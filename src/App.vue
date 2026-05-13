@@ -26,16 +26,60 @@
     </Transition>
 
     <Transition name="fade-in">
-      <SurprisePage v-if="surpriseVisible" />
+      <SurprisePage
+        ref="surprisePageRef"
+        v-if="surpriseVisible"
+        @note="activePanel = 'note'"
+        @memories="activePanel = 'memories'"
+        @songs="activePanel = 'songs'"
+      />
     </Transition>
+
+    <Teleport to="body">
+      <div v-if="activePanel" class="app-panel-overlay" role="dialog" aria-modal="true" @click.self="activePanel = null">
+        <div class="app-panel" :class="{ 'app-panel--playlist': activePanel === 'songs' }">
+          <button type="button" class="app-panel__close" aria-label="Close" @click="activePanel = null">✕</button>
+          <template v-if="activePanel === 'note'">
+            <h2 class="app-panel__title">A note for you</h2>
+            <p class="app-panel__body">Edit this text in <code>App.vue</code> — or replace this panel with your own letter.</p>
+          </template>
+          <template v-else-if="activePanel === 'memories'">
+            <MemoriesCard/>
+          </template>
+          <template v-else-if="activePanel === 'songs'">
+            <PlaylistCard
+              title="For you"
+              subtitle="Tap any songs Mai wants to play. Mai can request for more songs by simply writing it in the note and uplaod it."
+              owner-name="Mai Li San"
+              :tracks="playlistTracks"
+              @playback="onPlaylistPlayback"
+            />
+          </template>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import SurprisePage from './components/SurprisePage.vue'
+import PlaylistCard from './components/PlaylistCard.vue'
+import MemoriesCard from './components/MemoriesCard.vue'
 
-const TARGET = new Date('2026-05-10T00:00:00-04:00')
+/** Songs shown in the Spotify-style panel — place files in `public/music/`. */
+const playlistTracks = [
+  { id: '1', title: 'About You', artist: 'The 1975', src: '/music/aboutYou.mp3' },
+  { id: '2', title: 'Hkap Lada', artist: 'Brang Tawng Li', src: '/music/hkaplada.mp3' },
+  { id: '3', title: 'Lover Rock', artist: 'TV Girl', src: '/music/Lovers_Rock.mp3'},
+  { id: '4', title: 'Harvey', artist: 'Her\'s', src: '/music/Harvey.mp3'},
+  { id: '5', title: 'blue', artist: 'Yung Kai', src: '/music/blue.mp3'},
+  { id: '6', title: 'For Sleeping', artist: 'Gabriel', src: '/music/For_sleeping.mp3'}
+]
+
+const surprisePageRef = ref(null)
+
+const TARGET = new Date('2026-05-14T00:00:00-04:00')
 
 const DAY_MS = 86_400_000
 const HOUR_MS = 3_600_000
@@ -47,6 +91,8 @@ const minutesLeft = ref(0)
 const secondsLeft = ref(0)
 const showSurprise = ref(false)
 const surpriseVisible = ref(false)
+/** 'note' | 'memories' | 'songs' | null — opened from birthday page buttons */
+const activePanel = ref(null)
 
 let timerId = null
 
@@ -79,6 +125,20 @@ function triggerSurprise () {
   clearInterval(timerId)
   showSurprise.value = true
 }
+
+function onPlaylistPlayback (playing) {
+  if (playing) {
+    surprisePageRef.value?.pauseBackgroundMusic?.()
+  } else {
+    surprisePageRef.value?.resumeBackgroundMusic?.()
+  }
+}
+
+watch(activePanel, (next, prev) => {
+  if (prev === 'songs' && next !== 'songs') {
+    surprisePageRef.value?.resumeBackgroundMusic?.()
+  }
+})
 
 const DEV_PREVIEW_SURPRISE = false
 
@@ -144,7 +204,7 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums; line-height: 1;
 }
 .hms-val  { font-size: clamp(1.75rem,8vw,2.75rem); color: #b89595; min-width: 2.25ch; text-align: center; }
-.hms-sep  { font-size: clamp(1.5rem,6vw,2.25rem); color: #ccc; padding: 0 .1rem; transform: translateY(-.06em); }
+.hms-sep  { font-size: clamp(1.5rem,6vw,2.25rem); color: #ccc; padding: 0 .1rem; transform: translateY(-.07em); }
 .hms-label { font-family: system-ui,sans-serif; font-size: .65rem; font-weight: 600; letter-spacing: .22em; color: #999; margin-top: .35rem; }
 .tz-note   { font-family: system-ui,sans-serif; font-size: .75rem; color: #bbb; margin-top: 1.25rem; letter-spacing: .04em; }
 
@@ -156,4 +216,65 @@ onUnmounted(() => {
 <style>
 .fade-in-enter-active { transition: opacity 1.2s ease; }
 .fade-in-enter-from { opacity: 0; }
+</style>
+
+<style>
+.app-panel-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(60, 45, 40, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.app-panel {
+  position: relative;
+  max-width: 420px;
+  width: 100%;
+  background: #fdfcf8;
+  border-radius: 20px;
+  padding: 2rem 1.75rem 1.5rem;
+  border: 1px solid #ece5dd;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+}
+
+.app-panel--playlist {
+  max-width: min(440px, 100%);
+  padding: 0.85rem 0.85rem 1rem;
+}
+.app-panel__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: #f0ebe6;
+  color: #7a6258;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+.app-panel__close:hover {
+  background: #e5ddd6;
+}
+.app-panel__title {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: #5c4a42;
+  margin-bottom: 0.75rem;
+}
+.app-panel__body {
+  font-family: system-ui, sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: #6a5a52;
+}
+.app-panel__body code {
+  font-size: 0.85em;
+}
 </style>
