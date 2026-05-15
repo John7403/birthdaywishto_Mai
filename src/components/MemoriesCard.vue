@@ -11,7 +11,7 @@
           </svg>
         </div>
         <div>
-          <h2 class="card-title">Memories Gallery</h2>
+          <h2 class="card-title">Mai's Gallery</h2>
           <p class="card-subtitle">{{ photos.length }} photo{{ photos.length !== 1 ? 's' : '' }} stored</p>
         </div>
       </div>
