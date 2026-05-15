@@ -98,12 +98,14 @@ let timerId = null
 
 function tick () {
   const ms = Math.max(0, TARGET.getTime() - Date.now())
+
+  const totalHours = Math.floor(ms / HOUR_MS)         // total hours remaining
   daysLeft.value = Math.floor(ms / DAY_MS)
-  hoursLeft.value = Math.floor((ms % DAY_MS) / HOUR_MS)
+  hoursLeft.value = totalHours                         // ← total, not remainder
   minutesLeft.value = Math.floor((ms % HOUR_MS) / MINUTE_MS)
   secondsLeft.value = Math.floor((ms % MINUTE_MS) / 1000)
 
-  if (ms === 0 && !showSurprise.value) {
+  if (ms <= 0 && !showSurprise.value) {
     triggerSurprise()
   }
 }
