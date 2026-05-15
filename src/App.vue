@@ -1,4 +1,5 @@
 <template>
+  <Analytics />
   <div class="app-root">
 
     <Transition name="fade-out" @after-leave="surpriseVisible = true">
@@ -63,6 +64,7 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { Analytics } from '@vercel/analytics/vue'
 import SurprisePage from './components/SurprisePage.vue'
 import PlaylistCard from './components/PlaylistCard.vue'
 import MemoriesCard from './components/MemoriesCard.vue'
