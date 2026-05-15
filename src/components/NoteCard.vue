@@ -1,4 +1,5 @@
 <template>
+  <teleport to="body">
   <!-- Modal Overlay -->
   <Transition name="modal-fade">
     <div v-if="show" class="modal-overlay" @click="closeModal"></div>
@@ -112,6 +113,7 @@
       </div>
     </div>
   </Transition>
+</teleport>
 </template>
 
 <script>
