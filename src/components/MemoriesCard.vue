@@ -51,9 +51,17 @@
                 <line x1="12" y1="3" x2="12" y2="15"/>
               </svg>
             </div>
-            <p class="upload-text">Drop photos here or <span class="upload-link">browse</span></p>
-            <p class="upload-hint">PNG, JPG, WEBP up to 10MB</p>
+            <p class="upload-text">
+              <span v-if="uploading">Uploading...</span>
+              <span v-else>Drop photos here or <span class="upload-link">browse</span></span>
+            </p>
+            <p class="upload-hint">PNG, JPG, WEBP, GIF up to 10MB</p>
           </div>
+        </div>
+
+        <!-- Upload progress indicator -->
+        <div v-if="uploading" class="upload-progress">
+          <div class="upload-progress__bar"></div>
         </div>
 
         <!-- Photo Grid (scrollable) -->
@@ -82,7 +90,7 @@
             </div>
           </div>
 
-          <!-- Scroll fade hint — only visible when there are enough photos to scroll -->
+          <!-- Scroll fade hint -->
           <div v-if="photos.length > gridThreshold" class="scroll-hint">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
               <path d="M6 9l6 6 6-6"/>
@@ -93,14 +101,14 @@
 
         <!-- Footer -->
         <div class="card-footer">
-          <button class="add-btn" @click="triggerFileInput">
+          <button class="add-btn" @click="triggerFileInput" :disabled="uploading">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
             Add Photos
           </button>
-          <button class="clear-btn" @click="clearAll" v-if="photos.length > 0">
-            Clear All
+          <button class="clear-btn" @click="clearUserPhotos" v-if="userPhotos.length > 0">
+            Clear Mine
           </button>
         </div>
       </div>
@@ -122,6 +130,8 @@
 </template>
 
 <script>
+import { supabase } from '../supabase'
+
 export default {
   name: 'MemoriesCard',
   data() {
@@ -130,73 +140,162 @@ export default {
       isDragging: false,
       hoveredIndex: null,
       lightboxPhoto: null,
-      // threshold: how many photos before the scroll hint appears (3 rows × ~3 cols)
+      uploading: false,
       gridThreshold: 9,
-      photos: [
+      // Default hardcoded photos — always shown first
+      defaultPhotos: [
         {
-          id: 1,
-          name: 'Bhirthday Girl',
+          id: 'default-1',
+          name: 'Birthday Girl',
           src: require('@/assets/memories/Birthday_Girl.jpeg'),
+          isDefault: true,
         },
         {
-          id: 2,
+          id: 'default-2',
           name: 'Nabai Kaw',
           src: require('@/assets/memories/Nabai_kaw.jpeg'),
+          isDefault: true,
         },
         {
-          id: 3,
+          id: 'default-3',
           name: 'Tsawm Ka',
           src: require('@/assets/memories/Tsawm_ka.jpeg'),
+          isDefault: true,
         },
         {
-          id: 4,
-          name: 'Lily',
-          src: require('@/assets/memories/lily.gif')
-        }
+          id: 'default-4',
+          name: 'Peinguin',
+          src: require('@/assets/images/peinguin.jpeg'),
+          isDefault: true,
+        },
       ],
-      nextId: 4,
-    };
+      // User-uploaded photos fetched from Supabase
+      userPhotos: [],
+      nextId: 100,
+    }
+  },
+  computed: {
+    // Combine defaults + user photos for display
+    photos() {
+      return [...this.defaultPhotos, ...this.userPhotos]
+    },
+  },
+  async mounted() {
+    try {
+      const { data, error } = await supabase.storage
+        .from('Photos')
+        .list('', { sortBy: { column: 'created_at', order: 'asc' } })
+
+      if (!error && data && data.length > 0) {
+        this.userPhotos = data.map((file) => ({
+          id: this.nextId++,
+          name: file.name.replace(/\.[^/.]+$/, '').replace(/^\d+-/, ''), // strip timestamp prefix
+          src: supabase.storage.from('Photos').getPublicUrl(file.name).data.publicUrl,
+          fileName: file.name,
+          isDefault: false,
+        }))
+      }
+    } catch (e) {
+      console.error('Failed to load photos from Supabase:', e)
+    }
   },
   methods: {
     toggleCard() {
-      this.isOpen = !this.isOpen;
+      this.isOpen = !this.isOpen
     },
     triggerFileInput() {
-      this.$refs.fileInput.click();
+      if (!this.uploading) this.$refs.fileInput.click()
     },
     handleFileChange(e) {
-      this.processFiles(Array.from(e.target.files));
-      e.target.value = '';
+      this.processFiles(Array.from(e.target.files))
+      e.target.value = ''
     },
     handleDrop(e) {
-      this.isDragging = false;
-      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-      this.processFiles(files);
+      this.isDragging = false
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
+      this.processFiles(files)
     },
-    processFiles(files) {
-      files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          this.photos.push({
-            id: this.nextId++,
-            name: file.name.replace(/\.[^/.]+$/, ''),
-            src: ev.target.result,
-          });
-        };
-        reader.readAsDataURL(file);
-      });
-    },
-    removePhoto(id) {
-      this.photos = this.photos.filter(p => p.id !== id);
+    async processFiles(files) {
+  if (files.length === 0) return
+  this.uploading = true
+
+  for (const file of files) {
+    try {
+      const fileName = `${Date.now()}-${file.name}`
+      console.log('Uploading:', fileName)
+
+      const { data, error } = await supabase.storage
+        .from('Photos')
+        .upload(fileName, file)
+
+      console.log('Upload result:', data, error)
+
+      if (error) {
+        alert('Upload failed: ' + error.message)
+        continue
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('Photos')
+        .getPublicUrl(fileName)
+
+      console.log('Public URL:', urlData.publicUrl)
+
+      this.userPhotos.push({
+        id: this.nextId++,
+        name: file.name.replace(/\.[^/.]+$/, ''),
+        src: urlData.publicUrl,
+        fileName,
+        isDefault: false,
+      })
+
+    } catch (e) {
+      console.error('Failed to upload photo:', e)
+      alert('Upload error: ' + e.message)
+    }
+  }
+
+  this.uploading = false
+},
+    async removePhoto(id) {
+      // Check if it's a default photo — just remove from view
+      const defaultPhoto = this.defaultPhotos.find(p => p.id === id)
+      if (defaultPhoto) {
+        this.defaultPhotos = this.defaultPhotos.filter(p => p.id !== id)
+        return
+      }
+
+      // Otherwise remove from Supabase storage + local state
+      const photo = this.userPhotos.find(p => p.id === id)
+      if (!photo) return
+
+      try {
+        await supabase.storage.from('Photos').remove([photo.fileName])
+      } catch (e) {
+        console.error('Failed to delete from Supabase:', e)
+      }
+
+      this.userPhotos = this.userPhotos.filter(p => p.id !== id)
     },
     viewPhoto(photo) {
-      this.lightboxPhoto = photo;
+      this.lightboxPhoto = photo
     },
-    clearAll() {
-      if (confirm('Remove all photos?')) this.photos = [];
+    async clearUserPhotos() {
+      if (!confirm('Remove all your uploaded photos? Default photos will stay.')) return
+
+      try {
+        const fileNames = this.userPhotos.map(p => p.fileName)
+        if (fileNames.length > 0) {
+          await supabase.storage.from('Photos').remove(fileNames)
+        }
+      } catch (e) {
+        console.error('Failed to clear photos:', e)
+      }
+
+      this.userPhotos = []
     },
   },
-};
+}
 </script>
 
 <style scoped>
@@ -210,11 +309,8 @@ export default {
   background: #ffffff;
   border: 1px solid #f2d9e4;
   border-radius: 20px;
-
-  /* fills whatever the panel gives it, but never wider than 860px */
   width: 100%;
   max-width: 860px;
-
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(165, 100, 140, 0.12);
   transition: box-shadow 0.3s ease;
@@ -284,25 +380,42 @@ export default {
 .upload-link { color: #c8568d; font-weight: 500; }
 .upload-hint { font-size: 11px; color: #b1849a; margin: 0; }
 
+/* Upload progress bar */
+.upload-progress {
+  width: 100%;
+  height: 3px;
+  background: rgba(212, 111, 150, 0.15);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.upload-progress__bar {
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, #d46f96, transparent);
+  border-radius: 99px;
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%   { transform: translateX(-150%); }
+  100% { transform: translateX(400%); }
+}
+
 /* ── Photo grid wrapper — SCROLLABLE ────────────────── */
 .photo-grid-wrapper {
   position: relative;
-  /* caps height so it scrolls when photos overflow;
-     clamp: minimum 220px, ideal 40vh, max 420px */
-  max-height: clamp(220px, 40vh, 420px);
-  overflow-y: auto;
+  height: 320px;        /* fixed height instead of max-height */
+  min-height: 220px;
+  overflow-y: scroll;   /* scroll instead of auto — always shows scrollbar */
   overflow-x: hidden;
   border-radius: 10px;
-
-  /* thin pink scrollbar in WebKit */
   scrollbar-width: thin;
   scrollbar-color: #f2d9e4 transparent;
+  -webkit-overflow-scrolling: touch; /* smooth scroll on iOS */
 }
 .photo-grid-wrapper::-webkit-scrollbar { width: 5px; }
 .photo-grid-wrapper::-webkit-scrollbar-track { background: transparent; }
 .photo-grid-wrapper::-webkit-scrollbar-thumb { background: #f2d9e4; border-radius: 99px; }
 
-/* bottom fade-out so user knows there's more to scroll */
 .photo-grid-wrapper::after {
   content: '';
   position: sticky;
@@ -313,16 +426,14 @@ export default {
   height: 36px;
   background: linear-gradient(transparent, rgba(255,255,255,0.92));
   pointer-events: none;
-  margin-top: -36px;
 }
 
 /* ── Photo grid ─────────────────────────────────────── */
 .photo-grid {
   display: grid;
-  /* auto-fit: fills the row; each thumb is at least 100px, max 1fr */
   grid-template-columns: repeat(auto-fill, minmax(clamp(80px, 18vw, 130px), 1fr));
   gap: 8px;
-  padding-bottom: 2px; /* prevent cut-off from the fade overlay */
+  padding-bottom: 2px;
 }
 
 .photo-item {
@@ -362,8 +473,6 @@ export default {
 .view-btn { background: rgba(255,194,221,0.95); color: #52254d; }
 .view-btn:hover { background: #f9c0d5; transform: scale(1.1); }
 
-
-/* scroll hint text */
 .scroll-hint {
   display: flex; align-items: center; justify-content: center; gap: 4px;
   font-size: 10px; color: #b98aa4; letter-spacing: 0.06em;
@@ -391,8 +500,9 @@ export default {
   transition: all 0.25s ease;
   min-width: 0;
 }
+.add-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .add-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
-.add-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(212,111,150,0.2); }
+.add-btn:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(212,111,150,0.2); }
 .add-btn:active { transform: translateY(0); }
 
 .clear-btn {
@@ -443,6 +553,5 @@ export default {
 @media (max-width: 400px) {
   .card-body { padding: 14px; gap: 12px; }
   .card-header { padding: 14px; }
-  .add-btn span { display: none; } /* hide label, keep + icon on very small screens */
 }
 </style>

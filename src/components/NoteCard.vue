@@ -25,6 +25,11 @@
           </div>
         </header>
 
+        <!-- Loading indicator -->
+        <div v-if="loading" class="loading-bar">
+          <div class="loading-bar__inner"></div>
+        </div>
+
         <div class="notes-grid">
           <div
             v-for="note in notes"
@@ -32,91 +37,93 @@
             class="note-card"
             :style="{ backgroundColor: note.color }"
           >
-        <!-- View Mode -->
-        <template v-if="!note.editing">
-          <div class="note-body">
-            <p class="note-text" :class="{ empty: !note.text }">
-              {{ note.text || 'Empty note...' }}
-            </p>
-          </div>
-          <div class="note-footer">
-            <span class="note-date">{{ formatDate(note.createdAt) }}</span>
-            <div class="note-actions">
-              <button class="icon-btn edit-btn" @click="startEdit(note)" title="Edit">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-              </button>
-              <button class="icon-btn color-btn" @click="toggleColorPicker(note)" title="Change color">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="13.5" cy="6.5" r="0.5" fill="currentColor"/>
-                  <circle cx="17.5" cy="10.5" r="0.5" fill="currentColor"/>
-                  <circle cx="8.5" cy="7.5" r="0.5" fill="currentColor"/>
-                  <circle cx="6.5" cy="12.5" r="0.5" fill="currentColor"/>
-                  <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
-                </svg>
-              </button>
-              <button class="icon-btn delete-btn" @click="deleteNote(note.id)" title="Delete">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                  <path d="M10 11v6M14 11v6"/>
-                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                </svg>
-              </button>
-            </div>
-          </div>
+            <!-- View Mode -->
+            <template v-if="!note.editing">
+              <div class="note-body">
+                <p class="note-text" :class="{ empty: !note.text }">
+                  {{ note.text || 'Empty note...' }}
+                </p>
+              </div>
+              <div class="note-footer">
+                <span class="note-date">{{ formatDate(note.createdAt) }}</span>
+                <div class="note-actions">
+                  <button class="icon-btn edit-btn" @click="startEdit(note)" title="Edit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <button class="icon-btn color-btn" @click="toggleColorPicker(note)" title="Change color">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="13.5" cy="6.5" r="0.5" fill="currentColor"/>
+                      <circle cx="17.5" cy="10.5" r="0.5" fill="currentColor"/>
+                      <circle cx="8.5" cy="7.5" r="0.5" fill="currentColor"/>
+                      <circle cx="6.5" cy="12.5" r="0.5" fill="currentColor"/>
+                      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+                    </svg>
+                  </button>
+                  <button class="icon-btn delete-btn" @click="deleteNote(note.id)" title="Delete">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                      <path d="M10 11v6M14 11v6"/>
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
 
-          <!-- Color Picker -->
-          <transition name="fade">
-            <div v-if="note.showColorPicker" class="color-picker">
-              <button
-                v-for="color in colors"
-                :key="color"
-                class="color-swatch"
-                :style="{ backgroundColor: color }"
-                :class="{ active: note.color === color }"
-                @click="changeColor(note, color)"
+              <!-- Color Picker -->
+              <transition name="fade">
+                <div v-if="note.showColorPicker" class="color-picker">
+                  <button
+                    v-for="color in colors"
+                    :key="color"
+                    class="color-swatch"
+                    :style="{ backgroundColor: color }"
+                    :class="{ active: note.color === color }"
+                    @click="changeColor(note, color)"
+                  />
+                </div>
+              </transition>
+            </template>
+
+            <!-- Edit Mode -->
+            <template v-else>
+              <textarea
+                class="note-textarea"
+                v-model="note.draftText"
+                placeholder="Write your note..."
+                ref="textarea"
+                @keydown.esc="cancelEdit(note)"
               />
-            </div>
-          </transition>
-        </template>
-
-        <!-- Edit Mode -->
-        <template v-else>
-          <textarea
-            class="note-textarea"
-            v-model="note.draftText"
-            placeholder="Write your note..."
-            ref="textarea"
-            @keydown.esc="cancelEdit(note)"
-          />
-          <div class="edit-actions">
-            <button class="save-btn" @click="saveNote(note)">Save</button>
-            <button class="cancel-btn" @click="cancelEdit(note)">Cancel</button>
+              <div class="edit-actions">
+                <button class="save-btn" @click="saveNote(note)">Save</button>
+                <button class="cancel-btn" @click="cancelEdit(note)">Cancel</button>
+              </div>
+            </template>
           </div>
-        </template>
-      </div>
 
-      <!-- Empty placeholder cards -->
-      <div
-        v-for="n in emptySlots"
-        :key="'empty-' + n"
-        class="note-card note-card--empty"
-      >
-        <button class="empty-add-btn" @click="addNote">
-          <span>+</span>
-        </button>
-      </div>
+          <!-- Empty placeholder cards -->
+          <div
+            v-for="n in emptySlots"
+            :key="'empty-' + n"
+            class="note-card note-card--empty"
+          >
+            <button class="empty-add-btn" @click="addNote">
+              <span>+</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </Transition>
-</teleport>
+  </teleport>
 </template>
 
 <script>
+import { supabase } from '../supabase'
+
 export default {
   name: 'NoteCard',
   props: {
@@ -128,57 +135,62 @@ export default {
   emits: ['close'],
   data() {
     return {
+      loading: false,
       notes: [
         {
-          id: 1,
+          id: 'default-1',
           text: 'Happy Birthday yaw Tsawm ka✨. Myit da ni galaw myu ni galoi ma byin wa u ga. Yawng na matu ma chye ju dum ai yaw galoi ma supportive byin ya majaw. Wishing you all the best on your special day and always! 🎉🎂',
           color: '#FDF5F0',
           editing: false,
           draftText: '',
           showColorPicker: false,
           createdAt: new Date(),
+          isDefault: true,
         },
         {
-          id: 2,
+          id: 'default-2',
           text: 'Song Request ma mai ai...',
           color: '#FDEAE0',
           editing: false,
           draftText: '',
           showColorPicker: false,
           createdAt: new Date(),
+          isDefault: true,
         },
         {
-          id: 3,
+          id: 'default-3',
           text: 'Notes ma mai mat ai',
           color: '#E8DFF5',
           editing: false,
           draftText: '',
           showColorPicker: false,
           createdAt: new Date(),
+          isDefault: true,
         },
         {
-          id: 4,
+          id: 'default-4',
           text: 'Nre nkai gaw hkum ka!!!',
           color: '#FDEAE0',
           editing: false,
           draftText: '',
           showColorPicker: false,
           createdAt: new Date(),
-        }
+          isDefault: true,
+        },
       ],
       colors: [
-        '#FDF5F0', // warm cream
-        '#FDEAE0', // warm pink
-        '#FDD9C7', // warm peach
-        '#FEE4B5', // warm yellow
-        '#E8DFF5', // warm lavender
-        '#E0F3E8', // warm mint
-        '#F0E8E0', // warm tan
-        '#F5DDD5', // light rose
-        '#F9D5CC', // soft coral
-        '#E8E0E8', // pale mauve
+        '#FDF5F0',
+        '#FDEAE0',
+        '#FDD9C7',
+        '#FEE4B5',
+        '#E8DFF5',
+        '#E0F3E8',
+        '#F0E8E0',
+        '#F5DDD5',
+        '#F9D5CC',
+        '#E8E0E8',
       ],
-      nextId: 6,
+      nextTempId: 100,
       gridSize: 6,
     }
   },
@@ -188,6 +200,34 @@ export default {
       return filled < this.gridSize ? this.gridSize - filled : 0
     },
   },
+  async mounted() {
+    this.loading = true
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .order('created_at', { ascending: true })
+
+      if (!error && data) {
+        const dbNotes = data.map(n => ({
+          id: n.id,
+          text: n.text,
+          color: n.color,
+          editing: false,
+          draftText: '',
+          showColorPicker: false,
+          createdAt: new Date(n.created_at),
+          isDefault: false,
+        }))
+        // Append DB notes after the 4 hardcoded defaults
+        this.notes = [...this.notes, ...dbNotes]
+      }
+    } catch (e) {
+      console.error('Failed to load notes:', e)
+    } finally {
+      this.loading = false
+    }
+  },
   methods: {
     closeModal() {
       this.$emit('close')
@@ -195,13 +235,15 @@ export default {
     addNote() {
       const randomColor = this.colors[Math.floor(Math.random() * this.colors.length)]
       const newNote = {
-        id: this.nextId++,
+        id: 'temp-' + this.nextTempId++,
         text: '',
         color: randomColor,
         editing: true,
         draftText: '',
         showColorPicker: false,
         createdAt: new Date(),
+        isDefault: false,
+        isNew: true,
       }
       this.notes.push(newNote)
       this.$nextTick(() => {
@@ -224,20 +266,57 @@ export default {
         }
       })
     },
-    saveNote(note) {
-      note.text = note.draftText.trim()
+    async saveNote(note) {
+      const text = note.draftText.trim()
+      note.text = text
       note.editing = false
       note.draftText = ''
+
+      // Don't save default notes to DB
+      if (note.isDefault) return
+
+      try {
+        if (note.isNew) {
+          // Insert new note into Supabase
+          const { data, error } = await supabase
+            .from('notes')
+            .insert([{ text, color: note.color }])
+            .select()
+            .single()
+
+          if (!error && data) {
+            note.id = data.id   // replace temp id with real DB id
+            note.isNew = false
+          }
+        } else {
+          // Update existing note in Supabase
+          await supabase
+            .from('notes')
+            .update({ text, color: note.color })
+            .eq('id', note.id)
+        }
+      } catch (e) {
+        console.error('Failed to save note:', e)
+      }
     },
     cancelEdit(note) {
-      if (!note.text && note.draftText === '') {
-        this.deleteNote(note.id)
+      if (note.isNew) {
+        this.notes = this.notes.filter(n => n.id !== note.id)
         return
       }
       note.editing = false
       note.draftText = ''
     },
-    deleteNote(id) {
+    async deleteNote(id) {
+      const note = this.notes.find(n => n.id === id)
+      // Only delete from DB if it's a real saved note
+      if (note && !note.isDefault && !note.isNew) {
+        try {
+          await supabase.from('notes').delete().eq('id', id)
+        } catch (e) {
+          console.error('Failed to delete note:', e)
+        }
+      }
       this.notes = this.notes.filter(n => n.id !== id)
     },
     toggleColorPicker(note) {
@@ -248,9 +327,18 @@ export default {
     closeAllPickers() {
       this.notes.forEach(n => (n.showColorPicker = false))
     },
-    changeColor(note, color) {
+    async changeColor(note, color) {
       note.color = color
       note.showColorPicker = false
+
+      // Only update DB for saved (non-default, non-new) notes
+      if (!note.isDefault && !note.isNew) {
+        try {
+          await supabase.from('notes').update({ color }).eq('id', note.id)
+        } catch (e) {
+          console.error('Failed to update color:', e)
+        }
+      }
     },
     formatDate(date) {
       return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(date)
@@ -277,6 +365,27 @@ export default {
   box-shadow: 0 20px 60px rgba(165, 100, 140, 0.12);
   overflow: hidden;
   transition: box-shadow 0.3s ease;
+}
+
+/* Loading bar */
+.loading-bar {
+  width: 100%;
+  height: 3px;
+  background: rgba(168, 144, 136, 0.15);
+  border-radius: 99px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.loading-bar__inner {
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, #a89088, transparent);
+  border-radius: 99px;
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%   { transform: translateX(-150%); }
+  100% { transform: translateX(400%); }
 }
 
 /* Header */
@@ -638,7 +747,7 @@ export default {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .notes-app { padding: 24px 16px; }
+  .notes-card { padding: 24px 16px; }
   .notes-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
 }
 
