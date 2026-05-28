@@ -45,7 +45,7 @@
             <p class="app-panel__body">Edit this text in <code>App.vue</code> — or replace this panel with your own letter.</p>
           </template>
           <template v-else-if="activePanel === 'memories'">
-            <MemoriesCard/>
+            <MemoriesCard @media-playback="onMemoryPlayback"/>
           </template>
           <template v-else-if="activePanel === 'songs'">
             <PlaylistCard
@@ -138,8 +138,20 @@ function onPlaylistPlayback (playing) {
   }
 }
 
+function onMemoryPlayback (playing) {
+  if (playing) {
+    surprisePageRef.value?.pauseBackgroundMusic?.()
+  } else {
+    surprisePageRef.value?.resumeBackgroundMusic?.()
+  }
+}
+
 watch(activePanel, (next, prev) => {
   if (prev === 'songs' && next !== 'songs') {
+    surprisePageRef.value?.resumeBackgroundMusic?.()
+  }
+
+  if (prev === 'memories' && next !== 'memories') {
     surprisePageRef.value?.resumeBackgroundMusic?.()
   }
 })

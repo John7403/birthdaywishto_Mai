@@ -12,7 +12,7 @@
         </div>
         <div>
           <h2 class="card-title">Mai's Gallery</h2>
-          <p class="card-subtitle">{{ photos.length }} photo{{ photos.length !== 1 ? 's' : '' }} stored</p>
+          <p class="card-subtitle">{{ photos.length }} memory{{ photos.length !== 1 ? 's' : '' }} stored</p>
         </div>
       </div>
       <div class="chevron" :class="{ rotated: isOpen }">
@@ -38,7 +38,7 @@
           <input
             ref="fileInput"
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             multiple
             @change="handleFileChange"
             style="display: none"
@@ -53,9 +53,9 @@
             </div>
             <p class="upload-text">
               <span v-if="uploading">Uploading...</span>
-              <span v-else>Drop photos here or <span class="upload-link">browse</span></span>
+              <span v-else>Drop photos or videos here or <span class="upload-link">browse</span></span>
             </p>
-            <p class="upload-hint">PNG, JPG, WEBP, GIF up to 10MB</p>
+            <p class="upload-hint">Images and videos up to 10MB</p>
           </div>
         </div>
 
@@ -74,7 +74,25 @@
               @mouseenter="hoveredIndex = index"
               @mouseleave="hoveredIndex = null"
             >
-              <img :src="photo.src" :alt="photo.name" loading="lazy" />
+              <img
+                v-if="photo.type === 'image'"
+                :src="photo.src"
+                :alt="photo.name"
+                loading="lazy"
+                class="photo-media"
+              />
+              <video
+                v-else
+                :src="photo.src"
+                class="photo-media photo-video"
+                controls
+                muted
+                playsinline
+                preload="metadata"
+                @play="handleMediaPlayback(true)"
+                @pause="handleMediaPlayback(false)"
+                @ended="handleMediaPlayback(false)"
+              />
               <div class="photo-overlay" :class="{ visible: hoveredIndex === index }">
                 <button class="overlay-btn delete-btn" @click.stop="removePhoto(photo.id)" title="Delete">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -105,7 +123,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
-            Add Photos
+            Add Media
           </button>
           <button class="clear-btn" @click="clearUserPhotos" v-if="userPhotos.length > 0">
             Clear Mine
@@ -122,7 +140,23 @@
             <path d="M18 6L6 18M6 6l12 12"/>
           </svg>
         </button>
-        <img :src="lightboxPhoto.src" :alt="lightboxPhoto.name" class="lightbox-img" />
+        <img
+          v-if="lightboxPhoto.type === 'image'"
+          :src="lightboxPhoto.src"
+          :alt="lightboxPhoto.name"
+          class="lightbox-media lightbox-img"
+        />
+        <video
+          v-else
+          :src="lightboxPhoto.src"
+          class="lightbox-media lightbox-video"
+          controls
+          autoplay
+          playsinline
+          @play="handleMediaPlayback(true)"
+          @pause="handleMediaPlayback(false)"
+          @ended="handleMediaPlayback(false)"
+        />
         <p class="lightbox-name">{{ lightboxPhoto.name }}</p>
       </div>
     </transition>
@@ -134,6 +168,7 @@ import { supabase } from '../supabase'
 
 export default {
   name: 'MemoriesCard',
+  emits: ['media-playback'],
   data() {
     return {
       isOpen: true,
@@ -148,24 +183,28 @@ export default {
           id: 'default-1',
           name: 'Birthday Girl',
           src: require('@/assets/memories/Birthday_Girl.jpeg'),
+          type: 'image',
           isDefault: true,
         },
         {
           id: 'default-2',
           name: 'Nabai Kaw',
           src: require('@/assets/memories/Nabai_kaw.jpeg'),
+          type: 'image',
           isDefault: true,
         },
         {
           id: 'default-3',
           name: 'Tsawm Ka',
           src: require('@/assets/memories/Tsawm_ka.jpeg'),
+          type: 'image',
           isDefault: true,
         },
         {
           id: 'default-4',
           name: 'Peinguin',
           src: require('@/assets/images/peinguin.jpeg'),
+          type: 'image',
           isDefault: true,
         },
       ],
@@ -191,6 +230,7 @@ export default {
           id: this.nextId++,
           name: file.name.replace(/\.[^/.]+$/, '').replace(/^\d+-/, ''), // strip timestamp prefix
           src: supabase.storage.from('Photos').getPublicUrl(file.name).data.publicUrl,
+          type: this.getMediaType(file),
           fileName: file.name,
           isDefault: false,
         }))
@@ -200,6 +240,15 @@ export default {
     }
   },
   methods: {
+    getMediaType(file) {
+      const mimeType = file.type || file.metadata?.mimetype || ''
+      if (mimeType.startsWith('video/')) return 'video'
+      if (mimeType.startsWith('image/')) return 'image'
+
+      const extension = (file.name || '').split('.').pop()?.toLowerCase()
+      if (['mp4', 'mov', 'avi', 'webm', 'mkv', 'ogg'].includes(extension)) return 'video'
+      return 'image'
+    },
     toggleCard() {
       this.isOpen = !this.isOpen
     },
@@ -212,50 +261,55 @@ export default {
     },
     handleDrop(e) {
       this.isDragging = false
-      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
+      const files = Array.from(e.dataTransfer.files).filter(f =>
+        f.type.startsWith('image/') || f.type.startsWith('video/')
+      )
       this.processFiles(files)
     },
     async processFiles(files) {
   if (files.length === 0) return
   this.uploading = true
 
-  for (const file of files) {
-    try {
-      const fileName = `${Date.now()}-${file.name}`
-      console.log('Uploading:', fileName)
+  try {
+    for (const file of files) {
+      try {
+        const fileName = `${Date.now()}-${file.name}`
+        console.log('Uploading:', fileName)
 
-      const { data, error } = await supabase.storage
-        .from('Photos')
-        .upload(fileName, file)
+        const { data, error } = await supabase.storage
+          .from('Photos')
+          .upload(fileName, file)
 
-      console.log('Upload result:', data, error)
+        console.log('Upload result:', data, error)
 
-      if (error) {
-        alert('Upload failed: ' + error.message)
-        continue
+        if (error) {
+          alert('Upload failed: ' + error.message)
+          continue
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('Photos')
+          .getPublicUrl(fileName)
+
+        console.log('Public URL:', urlData.publicUrl)
+
+        this.userPhotos.push({
+          id: this.nextId++,
+          name: file.name.replace(/\.[^/.]+$/, ''),
+          src: urlData.publicUrl,
+          type: this.getMediaType(file),
+          fileName,
+          isDefault: false,
+        })
+
+      } catch (e) {
+        console.error('Failed to upload media:', e)
+        alert('Upload error: ' + e.message)
       }
-
-      const { data: urlData } = supabase.storage
-        .from('Photos')
-        .getPublicUrl(fileName)
-
-      console.log('Public URL:', urlData.publicUrl)
-
-      this.userPhotos.push({
-        id: this.nextId++,
-        name: file.name.replace(/\.[^/.]+$/, ''),
-        src: urlData.publicUrl,
-        fileName,
-        isDefault: false,
-      })
-
-    } catch (e) {
-      console.error('Failed to upload photo:', e)
-      alert('Upload error: ' + e.message)
     }
+  } finally {
+    this.uploading = false
   }
-
-  this.uploading = false
 },
     async removePhoto(id) {
       // Check if it's a default photo — just remove from view
@@ -276,6 +330,9 @@ export default {
       }
 
       this.userPhotos = this.userPhotos.filter(p => p.id !== id)
+    },
+    handleMediaPlayback(isPlaying) {
+      this.$emit('media-playback', isPlaying)
     },
     viewPhoto(photo) {
       this.lightboxPhoto = photo
@@ -445,12 +502,15 @@ export default {
   cursor: pointer;
   box-shadow: inset 0 0 0 1px rgba(230, 195, 213, 0.5);
 }
-.photo-item img {
+.photo-media {
   width: 100%; height: 100%;
   object-fit: cover; display: block;
   transition: transform 0.4s ease;
 }
-.photo-item:hover img { transform: scale(1.06); }
+.photo-video {
+  background: #000;
+}
+.photo-item:hover .photo-media { transform: scale(1.06); }
 
 .photo-overlay {
   position: absolute; inset: 0;
@@ -523,10 +583,13 @@ export default {
   align-items: center; justify-content: center;
   padding: 20px; backdrop-filter: blur(8px);
 }
-.lightbox-img {
+.lightbox-media {
   max-width: 90vw; max-height: 80vh;
   object-fit: contain; border-radius: 12px;
   box-shadow: 0 40px 120px rgba(165,100,140,0.18);
+}
+.lightbox-video {
+  background: #000;
 }
 .lightbox-name { color: #8f697f; font-size: 13px; margin: 14px 0 0; }
 .lightbox-close {
