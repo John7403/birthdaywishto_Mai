@@ -76,7 +76,10 @@ const playlistTracks = [
   { id: '3', title: 'Lover Rock', artist: 'TV Girl', src: '/music/Lovers_Rock.mp3'},
   { id: '4', title: 'Harvey', artist: 'Her\'s', src: '/music/Harvey.mp3'},
   { id: '5', title: 'blue', artist: 'Yung Kai', src: '/music/blue.mp3'},
-  { id: '6', title: 'For Sleeping', artist: 'Gabriel', src: '/music/For_sleeping.mp3'}
+  { id: '6', title: 'Light', artist: 'Wave To Earth', src: '/music/light_WaveToEarth.mp3'},
+  { id: '7', title: 'Sunsetz', artist: 'Cigarettes After Sex', src: '/music/CigarettesAfterSex_Sunsetz.mp3'},
+  { id: '8', title: 'Cry', artist: 'Cigarettes After Sex', src: '/music/Cry_CigarettesAfterSex.mp3'},
+  { id: '9', title: 'For Sleeping', artist: 'Gabriel', src: '/music/For_sleeping.mp3'}
 ]
 
 const surprisePageRef = ref(null)
