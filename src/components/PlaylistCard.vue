@@ -1,15 +1,5 @@
 <template>
   <div class="playlist-card">
-    <audio
-      ref="audioRef"
-      class="playlist-card__audio"
-      preload="metadata"
-      playsinline
-      @play="onAudioPlay"
-      @pause="onAudioPause"
-      @ended="onAudioEnded"
-    />
-
     <header class="playlist-card__hero">
       <div class="playlist-card__cover">
         <img
@@ -38,10 +28,10 @@
       <button
         type="button"
         class="playlist-card__play-all"
-        :aria-label="playingId ? 'Pause' : 'Play'"
+        :aria-label="playingId ? 'Play' : 'Play first song'"
         @click="togglePlayCurrent"
       >
-        <span v-if="!playingId || isPaused" class="playlist-card__play-icon" aria-hidden="true" />
+        <span v-if="!playingId || !isPlaying" class="playlist-card__play-icon" aria-hidden="true" />
         <span v-else class="playlist-card__pause-icon" aria-hidden="true">
           <span class="playlist-card__pause-bar" />
           <span class="playlist-card__pause-bar" />
@@ -62,7 +52,7 @@
           v-for="(track, index) in tracks"
           :key="track.id"
           class="playlist-card__row"
-          :class="{ 'playlist-card__row--active': playingId === track.id && !isPaused }"
+          :class="{ 'playlist-card__row--active': playingId === track.id && isPlaying }"
         >
           <button
             type="button"
@@ -70,7 +60,7 @@
             @click="selectTrack(track)"
           >
             <span class="playlist-card__idx">
-              <span v-if="playingId !== track.id || isPaused" class="playlist-card__idx-num">{{ index + 1 }}</span>
+              <span v-if="playingId !== track.id || !isPlaying" class="playlist-card__idx-num">{{ index + 1 }}</span>
               <span v-else class="playlist-card__eq" aria-hidden="true">
                 <span /><span /><span />
               </span>
@@ -88,7 +78,7 @@
 </template>
 
 <script setup>
-import { computed, onUnmounted, ref } from 'vue'
+import { computed } from 'vue'
 
 const props = defineProps({
   title: { type: String, default: 'Your mix' },
@@ -100,82 +90,23 @@ const props = defineProps({
     default: () => [],
   },
   coverAlt: { type: String, default: 'Mai' },
+  playingTrackId: { type: String, default: null },
+  isPlaying: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['playback'])
+const emit = defineEmits(['track-click'])
 
-const audioRef = ref(null)
-const playingId = ref(null)
-const isPaused = ref(true)
+const playingId = computed(() => props.playingTrackId)
 
-const currentTrack = computed(() => props.tracks.find((t) => t.id === playingId.value) || null)
-
-function onAudioPlay () {
-  isPaused.value = false
-  emit('playback', true)
+function selectTrack (track) {
+  emit('track-click', track)
 }
 
-function onAudioPause () {
-  isPaused.value = true
-  emit('playback', false)
-}
-
-function onAudioEnded () {
-  playingId.value = null
-  isPaused.value = true
-  emit('playback', false)
-}
-
-async function selectTrack (track) {
-  const el = audioRef.value
-  if (!el) return
-
-  if (playingId.value === track.id && !isPaused.value) {
-    el.pause()
-    return
-  }
-
-  if (playingId.value !== track.id) {
-    el.src = track.src
-    playingId.value = track.id
-  }
-  try {
-    await el.play()
-  } catch {
-    /* autoplay / gesture policies */
+function togglePlayCurrent () {
+  if (props.tracks.length) {
+    emit('track-click', props.tracks[0])
   }
 }
-
-async function togglePlayCurrent () {
-  const el = audioRef.value
-  if (!el) return
-
-  if (!currentTrack.value && props.tracks.length) {
-    await selectTrack(props.tracks[0])
-    return
-  }
-
-  if (!currentTrack.value) return
-
-  if (isPaused.value) {
-    try {
-      await el.play()
-    } catch {
-      /* ignore */
-    }
-  } else {
-    el.pause()
-  }
-}
-
-onUnmounted(() => {
-  const el = audioRef.value
-  if (el) {
-    el.pause()
-    el.removeAttribute('src')
-  }
-  emit('playback', false)
-})
 </script>
 
 <style scoped>
@@ -200,14 +131,6 @@ onUnmounted(() => {
   min-width: 0;
   border: 0.5px solid var(--border);
   box-shadow: 0 8px 28px rgba(180, 140, 120, 0.1);
-}
-
-.playlist-card__audio {
-  position: absolute;
-  width: 0;
-  height: 0;
-  opacity: 0;
-  pointer-events: none;
 }
 
 .playlist-card__hero {

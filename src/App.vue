@@ -1,6 +1,16 @@
 <template>
   <Analytics />
   <div class="app-root">
+    <audio
+      ref="playlistAudioRef"
+      class="playlist-audio"
+      preload="metadata"
+      playsinline
+      aria-hidden="true"
+      @play="onPlaylistAudioPlay"
+      @pause="onPlaylistAudioPause"
+      @ended="onPlaylistAudioEnded"
+    />
 
     <Transition name="fade-out" @after-leave="surpriseVisible = true">
       <div v-if="!showSurprise" class="countdown-page" role="timer" :aria-label="ariaLabel">
@@ -53,7 +63,9 @@
               subtitle="Tap any songs Mai wants to play. Mai can request for more songs by simply writing it in the note and uplaod it."
               owner-name="Mai Li San"
               :tracks="playlistTracks"
-              @playback="onPlaylistPlayback"
+              :playing-track-id="currentPlaylistTrackId"
+              :is-playing="playlistPlaying"
+              @track-click="onPlaylistTrackClick"
             />
           </template>
         </div>
@@ -83,6 +95,7 @@ const playlistTracks = [
 ]
 
 const surprisePageRef = ref(null)
+const playlistAudioRef = ref(null)
 
 const TARGET = new Date('2026-06-09T00:00:00-04:00')
 
@@ -98,6 +111,8 @@ const showSurprise = ref(false)
 const surpriseVisible = ref(false)
 /** 'note' | 'memories' | 'songs' | null — opened from birthday page buttons */
 const activePanel = ref(null)
+const currentPlaylistTrackId = ref(null)
+const playlistPlaying = ref(false)
 
 let timerId = null
 
@@ -133,12 +148,54 @@ function triggerSurprise () {
   showSurprise.value = true
 }
 
-function onPlaylistPlayback (playing) {
-  if (playing) {
-    surprisePageRef.value?.pauseBackgroundMusic?.()
-  } else {
+function onPlaylistAudioPlay () {
+  playlistPlaying.value = true
+  surprisePageRef.value?.pauseBackgroundMusic?.()
+}
+
+function onPlaylistAudioPause () {
+  playlistPlaying.value = false
+  if (activePanel.value !== 'songs') {
     surprisePageRef.value?.resumeBackgroundMusic?.()
   }
+}
+
+function onPlaylistAudioEnded () {
+  playlistPlaying.value = false
+  currentPlaylistTrackId.value = null
+  surprisePageRef.value?.resumeBackgroundMusic?.()
+}
+
+async function playPlaylistTrack (track) {
+  const el = playlistAudioRef.value
+  if (!el || !track) return
+
+  if (currentPlaylistTrackId.value !== track.id) {
+    el.src = track.src
+    currentPlaylistTrackId.value = track.id
+  }
+
+  try {
+    await el.play()
+    surprisePageRef.value?.pauseBackgroundMusic?.()
+  } catch {
+    /* ignore autoplay / gesture policies */
+  }
+}
+
+async function onPlaylistTrackClick (track) {
+  if (currentPlaylistTrackId.value === track.id && playlistPlaying.value) {
+    const el = playlistAudioRef.value
+    if (el) {
+      el.pause()
+    }
+    currentPlaylistTrackId.value = null
+    activePanel.value = null
+    return
+  }
+
+  activePanel.value = 'songs'
+  await playPlaylistTrack(track)
 }
 
 function onMemoryPlayback (playing) {
@@ -150,7 +207,7 @@ function onMemoryPlayback (playing) {
 }
 
 watch(activePanel, (next, prev) => {
-  if (prev === 'songs' && next !== 'songs') {
+  if (prev === 'songs' && next !== 'songs' && !playlistPlaying.value) {
     surprisePageRef.value?.resumeBackgroundMusic?.()
   }
 
@@ -172,6 +229,11 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (timerId) clearInterval(timerId)
+  const el = playlistAudioRef.value
+  if (el) {
+    el.pause()
+    el.removeAttribute('src')
+  }
 })
 </script>
 
@@ -185,6 +247,14 @@ onUnmounted(() => {
   width: 100%;
   min-height: 100vh;
   overflow: hidden;
+}
+
+.playlist-audio {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .countdown-page {
