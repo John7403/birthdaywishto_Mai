@@ -83,15 +83,16 @@ import MemoriesCard from './components/MemoriesCard.vue'
 
 /** Songs shown in the Spotify-style panel — place files in `public/music/`. */
 const playlistTracks = [
-  { id: '1', title: 'About You', artist: 'The 1975', src: '/music/aboutYou.mp3' },
-  { id: '2', title: 'Hkap Lada', artist: 'Brang Tawng Li', src: '/music/hkaplada.mp3' },
-  { id: '3', title: 'Lover Rock', artist: 'TV Girl', src: '/music/Lovers_Rock.mp3'},
-  { id: '4', title: 'Harvey', artist: 'Her\'s', src: '/music/Harvey.mp3'},
-  { id: '5', title: 'blue', artist: 'Yung Kai', src: '/music/blue.mp3'},
-  { id: '6', title: 'Light', artist: 'Wave To Earth', src: '/music/light_WaveToEarth.mp3'},
-  { id: '7', title: 'Sunsetz', artist: 'Cigarettes After Sex', src: '/music/CigarettesAfterSex_Sunsetz.mp3'},
-  { id: '8', title: 'Cry', artist: 'Cigarettes After Sex', src: '/music/Cry_CigarettesAfterSex.mp3'},
-  { id: '9', title: 'For Sleeping', artist: 'Gabriel', src: '/music/For_sleeping.mp3'}
+  { id: '1', title: 'My Love Mine All Mine', artist: 'Mitski', src: '/music/Mitski_MyLoveMineAllMine.mp3' },
+  { id: '2', title: 'About You', artist: 'The 1975', src: '/music/aboutYou.mp3' },
+  { id: '3', title: 'Hkap Lada', artist: 'Brang Tawng Li', src: '/music/hkaplada.mp3' },
+  { id: '4', title: 'Lover Rock', artist: 'TV Girl', src: '/music/Lovers_Rock.mp3'},
+  { id: '5', title: 'Harvey', artist: 'Her\'s', src: '/music/Harvey.mp3'},
+  { id: '6', title: 'blue', artist: 'Yung Kai', src: '/music/blue.mp3'},
+  { id: '7', title: 'Light', artist: 'Wave To Earth', src: '/music/light_WaveToEarth.mp3'},
+  { id: '8', title: 'Sunsetz', artist: 'Cigarettes After Sex', src: '/music/CigarettesAfterSex_Sunsetz.mp3'},
+  { id: '9', title: 'Cry', artist: 'Cigarettes After Sex', src: '/music/Cry_CigarettesAfterSex.mp3'},
+  { id: '10', title: 'For Sleeping', artist: 'Gabriel', src: '/music/For_sleeping.mp3'}
 ]
 
 const surprisePageRef = ref(null)
@@ -189,8 +190,6 @@ async function onPlaylistTrackClick (track) {
     if (el) {
       el.pause()
     }
-    currentPlaylistTrackId.value = null
-    activePanel.value = null
     return
   }
 
