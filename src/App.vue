@@ -320,8 +320,8 @@ onUnmounted(() => {
 }
 .app-panel {
   position: relative;
-  max-width: 420px;
-  width: 100%;
+  max-width: 980px;
+  width: min(980px, 100%);
   background: #fdfcf8;
   border-radius: 20px;
   padding: 2rem 1.75rem 1.5rem;

@@ -118,7 +118,7 @@
     </TransitionGroup>
 
     <div class="card" @click.stop>
-      <p class="eyebrow">TODAY IS YOUR SPECIAL DAY!</p>
+      <p class="eyebrow">EVERYDAY IS YOUR SPECIAL DAY</p>
 
       <div class="cake-wrap" @click.stop="spawnFlowerNear">
         <div class="cake-glow"></div>
@@ -149,7 +149,7 @@ const emit = defineEmits(['memories', 'songs'])
 const BACKGROUND_MUSIC_SRC = '/music/aboutYou.mp3'
 
 /** Edit this line for the headline */
-const displayName = 'Happy Birthday Mai Li San✨'
+const displayName = 'For Mai Li San✨'
 
 const bgAudio = ref(null)
 

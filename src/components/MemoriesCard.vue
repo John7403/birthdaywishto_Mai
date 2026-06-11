@@ -367,7 +367,7 @@ export default {
   border: 1px solid #f2d9e4;
   border-radius: 20px;
   width: 100%;
-  max-width: 860px;
+  max-width: 980px;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(165, 100, 140, 0.12);
   transition: box-shadow 0.3s ease;
